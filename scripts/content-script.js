@@ -1,3 +1,15 @@
-console.log('Hello from the content script!');
+let port = chrome.runtime.connect({name: "tts"});
 
-$("p").css("background-color", "yellow");
+let currentElement = null;
+
+// TTS message receiver port
+port.onMessage.addListener(function(msg) {
+
+});
+
+// Events on the page
+$(document).on('click', function(e) {
+    currentElement = e.target;
+    port.postMessage({action: "read", text: currentElement.textContent});
+
+});

@@ -2,6 +2,7 @@
     "manifest_version": 3, 
     "name": "Text To Speech Highlighter",
     "version": "0.1.0",
+    "minimum_chrome_version": "23",
     "description": "Highlight text while reading it out loud",    
     "icons": {
 
@@ -9,14 +10,16 @@
     "permissions": [
         "activeTab",
         "declarativeContent",
-        "storage"
+        "storage",
+        "tts",
+        "ttsEngine"
     ],
     "background": {
         "service_worker": "service-worker.js"
     },
 
     "action": {
-        "default_popup": "popup.html",
+        "default_popup": "popup/popup.html",
         "default_icon": {        
         }
     },
@@ -29,5 +32,19 @@
             ],
             "run_at": "document_end"
         }
-    ]
+    ],
+    "tts_engine": {
+        "voices": [
+          {
+            "voice_name": "Alice",
+            "lang": "en-US",
+            "event_types": ["start", "marker", "end"]
+          },
+          {
+            "voice_name": "Pat",
+            "lang": "en-US",
+            "event_types": ["end"]
+          }
+        ]
+      }
 }
