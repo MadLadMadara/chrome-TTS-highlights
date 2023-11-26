@@ -11,8 +11,7 @@
         "activeTab",
         "declarativeContent",
         "storage",
-        "tts",
-        "ttsEngine"
+        "tts"
     ],
     "background": {
         "service_worker": "service-worker.js"
@@ -28,23 +27,10 @@
             "matches": ["<all_urls>"],
             "js": [
                 "thirdPartyScripts/jquery-3.7.1.min.js",
+                "thirdPartyScripts/jquery.mark.min.js",
                 "scripts/content-script.js"
             ],
             "run_at": "document_end"
         }
-    ],
-    "tts_engine": {
-        "voices": [
-          {
-            "voice_name": "Alice",
-            "lang": "en-US",
-            "event_types": ["start", "marker", "end"]
-          },
-          {
-            "voice_name": "Pat",
-            "lang": "en-US",
-            "event_types": ["end"]
-          }
-        ]
-      }
+    ]
 }
