@@ -11,7 +11,12 @@
         "activeTab",
         "declarativeContent",
         "storage",
-        "tts"
+        "tts",
+        "scripting"
+    ],
+    "host_permissions": [
+        "*://*/*"
+
     ],
     "background": {
         "service_worker": "service-worker.js"
@@ -24,7 +29,7 @@
     },
     "content_scripts": [
         {
-            "matches": ["<all_urls>"],
+            "matches": ["*://*/*"],
             "js": [
                 "thirdPartyScripts/jquery-3.7.1.min.js",
                 "thirdPartyScripts/jquery.mark.min.js",
