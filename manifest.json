@@ -16,7 +16,6 @@
     ],
     "host_permissions": [
         "*://*/*"
-
     ],
     "background": {
         "service_worker": "service-worker.js"
