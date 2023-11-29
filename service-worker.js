@@ -1,7 +1,8 @@
 // required for updaiting/installing content scripts
 let manifestData = chrome.runtime.getManifest();
-// message all tabs
-const messageAllTabs = (message) => {
+// call a function on all tabs that match the content script url and 
+/// pass the tab to the function
+const foreachTab = (onTab) => {
     chrome.tabs.query(
         {
             url: manifestData.content_scripts[0].matches[0],
@@ -9,63 +10,78 @@ const messageAllTabs = (message) => {
         (tabs) =>
             tabs.forEach(
                 (tab) => {
-                    chrome.tabs.sendMessage(tab.id, {
-                        ...message,
-                    });
+                    onTab(tab);
                 },
                 (error) => {
                     console.error(
-                        "Error messaging all tab: " +
+                        "Error: " +
                             error +
                             "\nURL: " +
-                            tab.url + 
-                            "\nMessage: " + message
+                            tab.url
                     );
                 }
             )
     );
 };
+// event handler for TTS
+const ttsEventHandler = (event, tab) => {
+    switch (event.type) {
+        case "start":
+            break;
+        case "word":
+            console.log("TTS word: " + event.charIndex + " " + event.length);
+            chrome.tabs.sendMessage(tab.id, {
+                action: "mark-word",
+                charIndex: event.charIndex,
+                length: event.length,
+            });
+            break;
+        case "sentence":
+            // not used
+            console.log("TTS sentence: " + event.charIndex);
+            break;
+        case "end":
+        case "interrupted":
+        case "cancelled":
+            console.log("TTS " + event.type);
+            foreachTab((tab) => {
+                chrome.tabs.sendMessage(tab.id, {
+                    action: "unmark-all",
+                });
+            });
+            break;
+        case "error":
+            break;
+        default:
+            // as a fail safe, unmark all
+            // messageAllTabs({action: "unmark-all"});
+            console.error("Unknown TTS event: " + event.type);
+            break;
+    }
+};
 // on install and update listener
 chrome.runtime.onInstalled.addListener((details) => {
     // one install or update
     //TODO: can be set to update only on major version change
-    if (
-        details.reason === chrome.runtime.OnInstalledReason.INSTALL ||
-        details.reason === chrome.runtime.OnInstalledReason.UPDATE
-    ) {
-        console.log("Installing or updating...");
-        // inject scripts
-        chrome.tabs.query(
-            {
-                url: manifestData.content_scripts[0].matches[0],
-            },
-            (tabs) =>
-                tabs.forEach(
-                    (tab) => {
-                        // ignore chrome:// pages
-                        console.log("Injecting scripts to tab: " + tab.url);
-                        if (tab.url?.startsWith("chrome://")) return;
-                        chrome.scripting.executeScript({
-                            target: {
-                                tabId: tab.id,
-                            },
-                            files: [...manifestData.content_scripts[0].js],
-                        });
-                    },
-                    (error) => {
-                        console.error(
-                            "Error injecting scripts on install/update: " +
-                                error
-                        );
-                    }
-                )
-        );
+    if (details.reason === chrome.runtime.OnInstalledReason.INSTALL) {
+        console.log("Installing...");
+    } else if (details.reason === chrome.runtime.OnInstalledReason.UPDATE) {
+        console.log("Updating...");
+        // inject scripts into all tabs that match the content script url
+        foreachTab((tab) => {
+            console.log("Injecting scripts to tab: " + tab.url);
+            chrome.scripting.executeScript({
+                target: {
+                    tabId: tab.id,
+                },
+                files: [...manifestData.content_scripts[0].js],
+            });
+        });
     }
 });
 
 /// Chrome message receiver
 chrome.runtime.onMessage.addListener((request, sender) => {
-    var tab = sender.tab;
     switch (request.action) {
         case "read":
             chrome.tts.speak(
@@ -74,54 +90,7 @@ chrome.runtime.onMessage.addListener((request, sender) => {
                     voiceName: "Microsoft George - English (United Kingdom)",
                     rate: 0.8,
                     lang: "en-GB",
-                    onEvent: (event) => {
-                        // TODO: this event handeler should be in for cleaner code
-                        switch (event.type) {
-                            case "start":
-                                break;
-                            case "word":
-                                console.log(
-                                    "TTS word: " +
-                                        event.charIndex +
-                                        " " +
-                                        event.length
-                                );
-                                chrome.tabs.sendMessage(tab.id, {
-                                    action: "mark-word",
-                                    charIndex: event.charIndex,
-                                    length: event.length,
-                                });
-                                break;
-                            case "sentence":
-                                // not used
-                                console.log(
-                                    "TTS sentence: " +
-                                        event.charIndex
-                                );
-                                break;
-                            case "end":
-                                console.log("TTS end");
-                                messageAllTabs({ action: "unmark-all" });
-                                break;
-                            case "interrupted":
-                                console.log("TTS interrupted");
-                                messageAllTabs({ action: "unmark-all" });
-                                break;
-                            case "cancelled":
-                                console.log("TTS cancelled");
-                                messageAllTabs({ action: "unmark-all" });
-                                break;
-                            case "error":
-                                break;
-                            default:
-                                // as a fail safe, unmark all
-                                // messageAllTabs({action: "unmark-all"});
-                                console.error(
-                                    "Unknown TTS event: " + event.type
-                                );
-                                break;
-                        }
-                    },
+                    onEvent: (event) => ttsEventHandler(event, sender.tab),
                 },
                 function () {}
             );
