@@ -12,13 +12,15 @@
         "declarativeContent",
         "storage",
         "tts",
-        "scripting"
+        "scripting",
+        "contextMenus"
     ],
     "host_permissions": [
         "*://*/*"
     ],
     "background": {
-        "service_worker": "service-worker.js"
+        "service_worker": "service-worker.js",
+        "type": "module"
     },
 
     "action": {

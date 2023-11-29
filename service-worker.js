@@ -1,6 +1,7 @@
-// required for updaiting/installing content scripts
+import {ttsConfig}  from './locales.js';
+// required for updating/installing content scripts
 let manifestData = chrome.runtime.getManifest();
-// call a function on all tabs that match the content script url and 
+// call a function on all tabs that match the content script url and
 /// pass the tab to the function
 const foreachTab = (onTab) => {
     chrome.tabs.query(
@@ -8,19 +9,9 @@ const foreachTab = (onTab) => {
             url: manifestData.content_scripts[0].matches[0],
         },
         (tabs) =>
-            tabs.forEach(
-                (tab) => {
-                    onTab(tab);
-                },
-                (error) => {
-                    console.error(
-                        "Error: " +
-                            error +
-                            "\nURL: " +
-                            tab.url
-                    );
-                }
-            )
+            tabs.forEach((tab) => {
+                onTab(tab);
+            })
     );
 };
 // event handler for TTS
@@ -36,10 +27,6 @@ const ttsEventHandler = (event, tab) => {
                 length: event.length,
             });
             break;
-        case "sentence":
-            // not used
-            console.log("TTS sentence: " + event.charIndex);
-            break;
         case "end":
         case "interrupted":
         case "cancelled":
@@ -51,6 +38,7 @@ const ttsEventHandler = (event, tab) => {
             });
             break;
         case "error":
+            console.error("TTS error: " + event.errorMessage);
             break;
         default:
             // as a fail safe, unmark all
@@ -69,7 +57,7 @@ chrome.runtime.onInstalled.addListener((details) => {
         console.log("Updating...");
         // inject scripts into all tabs that match the content script url
         foreachTab((tab) => {
-            console.log("Injecting scripts to tab: " + tab.url);
+            console.log("Injecting content scripts to tab URL: " + tab.url);
             chrome.scripting.executeScript({
                 target: {
                     tabId: tab.id,
@@ -91,6 +79,8 @@ chrome.runtime.onMessage.addListener((request, sender) => {
                     rate: 0.8,
                     lang: "en-GB",
                     onEvent: (event) => ttsEventHandler(event, sender.tab),
+                    requiredEventTypes: ttsConfig.eventsWhiteList,
+                    desiredEventTypes: ttsConfig.eventsWhiteList,
                 },
                 function () {}
             );
