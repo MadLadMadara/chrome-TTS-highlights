@@ -1,6 +1,6 @@
-import {ttsConfig}  from './locales.js';
+import {ttsConfig, contextMenuConfig}  from './locales.js';
 // required for updating/installing content scripts
-let manifestData = chrome.runtime.getManifest();
+const manifestData = chrome.runtime.getManifest();
 // call a function on all tabs that match the content script url and
 /// pass the tab to the function
 const foreachTab = (onTab) => {
@@ -23,8 +23,10 @@ const ttsEventHandler = (event, tab) => {
             console.log("TTS word: " + event.charIndex + " " + event.length);
             chrome.tabs.sendMessage(tab.id, {
                 action: "mark-word",
-                charIndex: event.charIndex,
-                length: event.length,
+                data :{
+                    charIndex: event.charIndex,
+                    length: event.length,
+                }
             });
             break;
         case "end":
@@ -34,6 +36,7 @@ const ttsEventHandler = (event, tab) => {
             foreachTab((tab) => {
                 chrome.tabs.sendMessage(tab.id, {
                     action: "unmark-all",
+                    data: null
                 });
             });
             break;
@@ -49,8 +52,13 @@ const ttsEventHandler = (event, tab) => {
 };
 // on install and update listener
 chrome.runtime.onInstalled.addListener((details) => {
+    // context set up, create context menu items from config
+    for (const [key, value] of Object.entries(contextMenuConfig)) {
+        chrome.contextMenus.create({
+            ...value
+        });
+    }
     // one install or update
-    //TODO: can be set to update only on major version change
     if (details.reason === chrome.runtime.OnInstalledReason.INSTALL) {
         console.log("Installing...");
     } else if (details.reason === chrome.runtime.OnInstalledReason.UPDATE) {
@@ -68,12 +76,33 @@ chrome.runtime.onInstalled.addListener((details) => {
     }
 });
 
+// context menu click listener
+chrome.contextMenus.onClicked.addListener((item, tab) => {
+    console.log("Context menu item clicked: " + item.menuItemId);
+    switch (item.menuItemId) {
+        // on select
+        case contextMenuConfig.select.id:
+            chrome.tabs.sendMessage(tab.id, {
+                action: "read-selection",
+                data: null
+            });
+            break;
+        // on stop
+        case contextMenuConfig.stop.id:
+            chrome.tts.stop();
+            break;
+        default:
+            console.error("Unknown context menu item: " + item.menuItemId);
+            break;
+    }
+});
+
 /// Chrome message receiver
 chrome.runtime.onMessage.addListener((request, sender) => {
     switch (request.action) {
         case "read":
             chrome.tts.speak(
-                request.text,
+                request.data.text,
                 {
                     voiceName: "Microsoft George - English (United Kingdom)",
                     rate: 0.8,
