@@ -3,7 +3,8 @@ let nodesToSpeak = {
     reading: false,
     nodes: [],
     currentIndex: 0,
-    initialOffset: 0,
+    startOffset: 0,
+    endOffset: 0,
     reset: function () {
         this.reading = false;
         this.nodes = [];
@@ -11,16 +12,51 @@ let nodesToSpeak = {
         this.initialOffset = 0;
     },
 };
-// let currentElement = null;
-// $(document).on("click", (event) => {
-//     let target = event.target;
-//     currentElement = target;
-//     chrome.runtime.sendMessage({
-//         action: "read",
-//         data: { text: target.textContent },
-//     });
-// });
 
+// using Levenshtein distance algorithm to compare strings
+// https://stackoverflow.com/questions/10473745/compare-strings-javascript-return-of-likely
+function similarity(s1, s2) {
+    var longer = s1;
+    var shorter = s2;
+    if (s1.length < s2.length) {
+        longer = s2;
+        shorter = s1;
+    }
+    var longerLength = longer.length;
+    if (longerLength == 0) {
+        return 1.0;
+    }
+    return (
+        (longerLength - editDistance(longer, shorter)) /
+        parseFloat(longerLength)
+    );
+}
+
+function editDistance(s1, s2) {
+    s1 = s1.toLowerCase();
+    s2 = s2.toLowerCase();
+
+    var costs = new Array();
+    for (var i = 0; i <= s1.length; i++) {
+        var lastValue = i;
+        for (var j = 0; j <= s2.length; j++) {
+            if (i == 0) costs[j] = j;
+            else {
+                if (j > 0) {
+                    var newValue = costs[j - 1];
+                    if (s1.charAt(i - 1) != s2.charAt(j - 1))
+                        newValue =
+                            Math.min(Math.min(newValue, lastValue), costs[j]) +
+                            1;
+                    costs[j - 1] = lastValue;
+                    lastValue = newValue;
+                }
+            }
+        }
+        if (i > 0) costs[s2.length] = lastValue;
+    }
+    return costs[s2.length];
+}
 // Chrome message receiver
 chrome.runtime.onMessage.addListener((request) => {
     switch (request.action) {
@@ -50,81 +86,92 @@ chrome.runtime.onMessage.addListener((request) => {
             const selection = window.getSelection();
             const range = selection.getRangeAt(0);
 
+            // create an array of the selected text seperated by new lines
+            // new line seems to be a good indecater of a new element, not perfect but good enough for now
+            // TODO: Will need refinement and tinkering to get this working well
             const selectedTextArray = selection
                 .toString()
                 .split(/\r?\n/)
                 .filter((text) => text);
-            const maxContentLength =
-                range.startOffset +
-                selectedTextArray.reduce(
-                    (max, text) => Math.max(max, text.length),
-                    0
-                ) +
-                range.endOffset;
-            console.log("selection:", selection);
-            console.log("range:", range);
-            console.log("text:", selectedTextArray);
-            console.log("maxContentLength:", maxContentLength);
 
+            let search_set = new Set();
+            selectedTextArray.forEach((text) => {
+                search_set.add({
+                    text: text.trim(),
+                    node_similarity: 0.0,
+                    node: null,
+                });
+            });
+
+            console.log("selection:", selection.toString(), selection);
+            console.log("range:", range);
+            console.log("selectedTextArray:", selectedTextArray);
             // get the nodes that contain the selected text
             const root = range.commonAncestorContainer;
+
+            // tree walker to find text nodes
+            // will need to handle hidden text nodes
             const treeWalker = document.createTreeWalker(
                 root,
-                NodeFilter.SHOW_TEXT,
+                NodeFilter.SHOW_ALL,
                 {
                     acceptNode(node) {
-                        if (
-                            node.textContent === undefined ||
-                            node.textContent === null
+                        if (    
+                            node.nodeName !== "SCRIPT" ||
+                            node.nodeName !== "STYLE" ||
+                            node.nodeName !== "BR" ||
+                            node.nodeName !== "HR"
                         ) {
-                            return NodeFilter.FILTER_REJECT;
-                        } else if (
-                            node.textContent.length > maxContentLength ||
-                            node.textContent === ""
-                        ) {
-                            return NodeFilter.FILTER_REJECT;
+                            return NodeFilter.FILTER_ACCEPT;
                         }
-                        return NodeFilter.FILTER_ACCEPT;
+                        return NodeFilter.FILTER_REJECT;
                     },
-                }
+                },
+                false
             );
 
-            const recursiveParentFind = (currentNode, text) => {
-                if (currentNode === null || currentNode === undefined || currentNode.nodeType == Node.DOCUMENT_NODE) {
-                    return null;
-                } else {
-                    if (currentNode.textContent === text) {
-                        return currentNode;
-                    } else {
-                        return recursiveParentFind(
-                            currentNode.parentElement,
-                            text
-                        );
-                    }
-                }
-            }
+            
 
-            let _nodes = new Set();
-            let selectedTextArrayIndex = 0;
-            let currentNode = treeWalker.currentNode;
-            while ((currentNode = treeWalker.nextNode())) {
-                console.log("currentNode:", currentNode);
-                console.log("selectedTextArray", selectedTextArrayIndex, selectedTextArray[selectedTextArrayIndex]);
-                if (selectedTextArrayIndex > selectedTextArray.length) break;
-                if(currentNode.textContent.length > selectedTextArray[selectedTextArrayIndex].length) continue;
-                if(currentNode.textContent === selectedTextArray[selectedTextArrayIndex]) {
-                    _nodes.add(currentNode);
-                    selectedTextArrayIndex++;
-                }else if(selectedTextArray[selectedTextArrayIndex].includes(currentNode.textContent)) {
+            console.time("Tree walker loop");
+            let currentDocumentNode = root;
+            do {
+                let wholeText = currentDocumentNode.wholeText;
+                let textContent = currentDocumentNode.textContent;
+                let innerText = currentDocumentNode.innerText;
+                let outerText = currentDocumentNode.outerText
+                
+                console.group("tree walker loop:", currentDocumentNode.nodeName, currentDocumentNode.nodeType, currentDocumentNode);
+                search_set.forEach((node) => {
+                    console.group("Search text:", node.text);
                     
-                    let parentWithContextMatch = recursiveParentFind(currentNode, selectedTextArray[selectedTextArrayIndex])
-                    if(parentWithContextMatch !== null) {
-                        _nodes.add(parentWithContextMatch);
-                        selectedTextArrayIndex++;
-                    }
-                }
-            }
-            console.log("nodes:", _nodes);
+                    console.group("Text in element"); 
+                    console.log("wholeText:", wholeText);
+                    console.log("textContent:", textContent);
+                    console.log("innerText:", innerText);
+                    console.log("outerText:", outerText);
+                    console.groupEnd();
+
+                    console.group("Includes check");
+                    console.log("wholeText:", wholeText == undefined ? undefined : wholeText.includes(node.text));
+                    console.log("textContent:", textContent == undefined ? undefined : textContent.includes(node.text));
+                    console.log("innerText:", innerText == undefined ? undefined : innerText.includes(node.text));
+                    console.log("outerText:", outerText == undefined ? undefined : outerText.includes(node.text));
+                    console.groupEnd();
+
+                    console.group("Similarity check"); 
+                    console.log("wholeText:", wholeText == undefined ? undefined : similarity(node.text, wholeText));
+                    console.log("textContent:", textContent == undefined ? undefined : similarity(node.text, textContent));
+                    console.log("innerText:", innerText == undefined ? undefined : similarity(node.text, innerText));
+                    console.log("outerText:", outerText == undefined ? undefined : similarity(node.text, outerText));
+                    console.groupEnd();
+
+                    console.groupEnd();
+                });
+                console.groupEnd();
+            } while (currentDocumentNode = treeWalker.nextNode());
+            console.timeEnd("Tree walker loop");
+            console.log("found nodes", search_set);
+
             break;
         case "unmark-all":
             $(document).unmark();
@@ -137,4 +184,5 @@ chrome.runtime.onMessage.addListener((request) => {
             console.error("Unknown action: " + request.action);
             break;
     }
+
 });
