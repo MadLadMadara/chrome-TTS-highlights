@@ -92,7 +92,10 @@ chrome.runtime.onMessage.addListener((request) => {
             const selectedTextArray = selection
                 .toString()
                 .split(/\r?\n/)
-                .filter((text) => text);
+                .filter((text) => text)
+                .map(function(item) {
+                    return item.trim();
+                });;
 
             let search_set = new Set();
             selectedTextArray.forEach((text) => {
@@ -117,14 +120,15 @@ chrome.runtime.onMessage.addListener((request) => {
                 {
                     acceptNode(node) {
                         if (    
-                            node.nodeName !== "SCRIPT" ||
-                            node.nodeName !== "STYLE" ||
-                            node.nodeName !== "BR" ||
-                            node.nodeName !== "HR"
+                            node.nodeName == "SCRIPT" ||
+                            node.nodeName == "STYLE" ||
+                            node.nodeName == "BR" ||
+                            node.nodeName == "HR" ||
+                            node.tagName=="IMG"
                         ) {
-                            return NodeFilter.FILTER_ACCEPT;
-                        }
-                        return NodeFilter.FILTER_REJECT;
+                            return NodeFilter.FILTER_REJECT;
+                        }else if (node.textContent === undefined) return NodeFilter.FILTER_SKIP;
+                        return NodeFilter.FILTER_ACCEPT;
                     },
                 },
                 false
@@ -135,36 +139,24 @@ chrome.runtime.onMessage.addListener((request) => {
             console.time("Tree walker loop");
             let currentDocumentNode = root;
             do {
-                let wholeText = currentDocumentNode.wholeText;
-                let textContent = currentDocumentNode.textContent;
-                let innerText = currentDocumentNode.innerText;
-                let outerText = currentDocumentNode.outerText
-                
+                let textContent = currentDocumentNode.textContent;                
                 console.group("tree walker loop:", currentDocumentNode.nodeName, currentDocumentNode.nodeType, currentDocumentNode);
                 search_set.forEach((node) => {
                     console.group("Search text:", node.text);
-                    
-                    console.group("Text in element"); 
-                    console.log("wholeText:", wholeText);
+                    console.group("Text in element");
+
+                    let include = textContent.includes(node.text);                
                     console.log("textContent:", textContent);
-                    console.log("innerText:", innerText);
-                    console.log("outerText:", outerText);
+                    console.log("textContent include:", include);
+                    $( `:contains('${node.text}')`).css( "text-decoration", "underline" )
+                    if (include) {
+                        node.node = currentDocumentNode;
+                        let sim = similarity(node.text, textContent)
+                        node.node_similarity = sim;
+                        console.log("textContent sim:", sim);
+                    }
+                    
                     console.groupEnd();
-
-                    console.group("Includes check");
-                    console.log("wholeText:", wholeText == undefined ? undefined : wholeText.includes(node.text));
-                    console.log("textContent:", textContent == undefined ? undefined : textContent.includes(node.text));
-                    console.log("innerText:", innerText == undefined ? undefined : innerText.includes(node.text));
-                    console.log("outerText:", outerText == undefined ? undefined : outerText.includes(node.text));
-                    console.groupEnd();
-
-                    console.group("Similarity check"); 
-                    console.log("wholeText:", wholeText == undefined ? undefined : similarity(node.text, wholeText));
-                    console.log("textContent:", textContent == undefined ? undefined : similarity(node.text, textContent));
-                    console.log("innerText:", innerText == undefined ? undefined : similarity(node.text, innerText));
-                    console.log("outerText:", outerText == undefined ? undefined : similarity(node.text, outerText));
-                    console.groupEnd();
-
                     console.groupEnd();
                 });
                 console.groupEnd();
