@@ -28,22 +28,13 @@
             "de": "Text To Speech Highlighter",
             "en": "Text To Speech Highlighter"
         },
-        "default_path": "sidepanel/page.html",
-        "js": [
-            "thirdPartyScripts/jquery-3.7.1.min.js",
-            "thirdPartyScripts/jquery.mark.min.js",
-            "sidepanel/page.js"
-        ],
-        "css": [
-            "sidepanel/page.css"
-        ]
+        "default_path": "sidepanel/page.html"
     },
     "content_scripts": [
         {
             "matches": ["*://*/*"],
             "js": [
-                "thirdPartyScripts/jquery-3.7.1.min.js",
-                "thirdPartyScripts/jquery.mark.min.js",
+                "/node_modules/jquery/dist/jquery.min.js",
                 "content-script.js"
             ],
             "run_at": "document_end"

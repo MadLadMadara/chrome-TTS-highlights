@@ -2,7 +2,6 @@
 import { ttsConfig } from "./locales.js";
 // required for updating/installing content scripts
 const manifestData = chrome.runtime.getManifest();
-
 // on install
 chrome.runtime.onInstalled.addListener((details) => {
     // create context menu

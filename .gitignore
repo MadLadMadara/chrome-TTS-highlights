@@ -1,0 +1,9 @@
+#env
+env.json
+# NPM
+node_modules
+node_modules/
+node_modules/*
+package-lock.json
+# scripts
+path.js
