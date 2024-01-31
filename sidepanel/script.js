@@ -4,7 +4,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         { action: "get_dom_text_content"},
         (response)=> {
             $("#text-area").text(response.data);
-            console.log(response.data);
+            console.log(response);
         }
     );
 });
