@@ -13,7 +13,8 @@
         "storage",
         "tts",
         "scripting",
-        "contextMenus"
+        "contextMenus",
+        "sidePanel"
     ],
     "host_permissions": [
         "*://*/*"
@@ -22,11 +23,20 @@
         "service_worker": "service-worker.js",
         "type": "module"
     },
-
-    "action": {
-        "default_popup": "popup/popup.html",
-        "default_icon": {        
-        }
+    "side_panel": {
+        "title": {
+            "de": "Text To Speech Highlighter",
+            "en": "Text To Speech Highlighter"
+        },
+        "default_path": "sidepanel/page.html",
+        "js": [
+            "thirdPartyScripts/jquery-3.7.1.min.js",
+            "thirdPartyScripts/jquery.mark.min.js",
+            "sidepanel/page.js"
+        ],
+        "css": [
+            "sidepanel/page.css"
+        ]
     },
     "content_scripts": [
         {
@@ -34,7 +44,7 @@
             "js": [
                 "thirdPartyScripts/jquery-3.7.1.min.js",
                 "thirdPartyScripts/jquery.mark.min.js",
-                "scripts/content-script.js"
+                "content-script.js"
             ],
             "run_at": "document_end"
         }

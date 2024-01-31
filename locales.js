@@ -1,5 +1,8 @@
 const ttsConfig = {
-    eventsWhiteList: [
+    default_voice: "Microsoft George - English (United Kingdom)",
+    default_rate: 0.8,
+    default_lang: "en-GB",
+    tts_events: [
         "start",
         "end",
         "word",
@@ -9,20 +12,4 @@ const ttsConfig = {
     ],
 };
 
-const contextMenuConfig = {
-    select: {
-        id: "select",
-        title: "Read selection aloud",
-        type: "normal",
-        contexts: ["selection"],
-        documentUrlPatterns: ["*://*/*"],
-    },
-    stop: {
-        id: "stop",
-        title: "Stop reading",
-        type: "normal",
-        contexts: ["all"],
-    },
-};
-
-export { ttsConfig, contextMenuConfig };
+export { ttsConfig };
