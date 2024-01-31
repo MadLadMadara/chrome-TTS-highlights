@@ -33,9 +33,10 @@
     "content_scripts": [
         {
             "matches": ["*://*/*"],
-            "js": [
-                "/node_modules/jquery/dist/jquery.min.js",
+            "js": [                
+                "/node_modules/jquery/dist/jquery.js",
                 "content-script.js"
+
             ],
             "run_at": "document_end"
         }
