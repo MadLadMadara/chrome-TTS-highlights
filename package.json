@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/MadLadMadara/chrome-TTS-highlights#readme",
   "dependencies": {
+    "gibberish-detector": "^1.0.0",
     "jquery": "^3.7.1"
   }
 }

@@ -1,5 +1,9 @@
 // local variables
+
+
+console.log("service-worker.js loaded");
 import { ttsConfig } from "./locales.js";
+import isGibberish from "/node_modules/gibberish-detector/index.js";
 // required for updating/installing content scripts
 const manifestData = chrome.runtime.getManifest();
 // on install
@@ -15,13 +19,22 @@ chrome.runtime.onInstalled.addListener((details) => {
 // on context menu click events
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (info.menuItemId === "openSidePanel") {
-        // open side panel
-        // must be done first or will get error
-        await chrome.sidePanel.open({ windowId: tab.windowId });
-        // const response = await chrome.tabs.sendMessage(tab.id, {
-        //     action: "get_dom_text_content",
-        // });
-        // console.log(response);
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            chrome.tabs.sendMessage(
+                tabs[0].id,
+                {action: "get_treeWalker_all" },
+                (response) => {
+                    console.log(parseHTML(response));
+                }
+            );
+        });
     }
 });
+
+
 // TODO: add event listener for when active tab changes.
+
+const parseHTML = (treeWaler) => {
+    console.log(treeWaler);
+}
+
