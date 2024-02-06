@@ -37,7 +37,8 @@
         {
             "matches": ["<all_urls>"],
             "resources": [
-                "/node_modules/jquery/dist/jquery.js"
+                "/node_modules/jquery/dist/jquery.js",
+                "/node_modules/@mozilla/readability/Readability.js"
         ]
 
         }
